@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chava Family Tree</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; font-family: sans-serif; }
+        .tree-line { border-left: 2px solid #94a3b8; margin-left: 24px; padding-left: 24px; }
+        .node-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.2s ease; }
+        .node-card:hover { border-color: #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const defaultData = {
+            id: 'g1-1',
+            generation: 1,
+            name: 'Rama Kotaiah Garu',
+            spouse: '',
+            mobile: '',
+            photo: '',
+            children: [
+                { id: 'g2-1', generation: 2, name: 'Annamayya Garu', spouse: '', mobile: '', photo: '', children: [] },
+                { id: 'g2-2', generation: 2, name: 'Ramanjanulu Garu', spouse: '', mobile: '', photo: '', children: [] },
+                { id: 'g2-3', generation: 2, name: 'Ramayya Garu', spouse: '', mobile: '', photo: '', children: [] },
+                { id: 'g2-4', generation: 2, name: 'Appayya Garu', spouse: '', mobile: '', photo: '', children: [] }
+            ]
+        };
+
+        const TreeNode = ({ node, onUpdate, onDelete, parentGeneration }) => {
+            const [isExpanded, setIsExpanded] = useState(node.generation === 1);
+            const [isEditing, setIsEditing] = useState(false);
+            const [editData, setEditData] = useState({ ...node });
+
+            const handleSave = () => {
+                onUpdate(editData);
+                setIsEditing(false);
+            };
+
+            const handleAddChild = () => {
+                if (node.generation >= 6) return;
+                const newChild = {
+                    id: Date.now().toString(),
+                    generation: node.generation + 1,
+                    name: 'New Member',
+                    spouse: '',
+                    mobile: '',
+                    photo: '',
+                    children: []
+                };
+                onUpdate({ ...node, children: [...(node.children || []), newChild] });
+                setIsExpanded(true);
+            };
+
+            const handleUpdateChild = (updatedChild) => {
+                const newChildren = node.children.map(c => c.id === updatedChild.id ? updatedChild : c);
+                onUpdate({ ...node, children: newChildren });
+            };
+
+            const handleDeleteChild = (childId) => {
+                if(window.confirm("Are you sure you want to delete this person and all their children/descendants?")) {
+                    const newChildren = node.children.filter(c => c.id !== childId);
+                    onUpdate({ ...node, children: newChildren });
+                }
+            };
+
+            const handlePhotoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setEditData({ ...editData, photo: reader.result });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const hasChildren = node.children && node.children.length > 0;
+
+            return (
+                <div className="mt-4">
+                    <div className="node-card flex flex-col md:flex-row gap-5 items-start md:items-center">
+                        {node.photo ? (
+                            <img src={node.photo} alt={node.name} className="w-20 h-20 rounded-full object-cover border-4 border-blue-100 shadow-sm" />
+                        ) : (
+                            <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center text-blue-700 font-bold border-4 border-blue-100 shadow-sm text-lg">
+                                G{node.generation}
+                            </div>
+                        )}
+                        
+                        <div className="flex-1 w-full">
+                            {isEditing ? (
+                                <div className="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <div><label className="text-xs font-semibold text-gray-500 uppercase">Full Name</label><input type="text" className="border border-gray-300 p-2 w-full rounded focus:ring-2 focus:ring-blue-500 outline-none" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} /></div>
+                                    <div><label className="text-xs font-semibold text-gray-500 uppercase">Spouse Name</label><input type="text" className="border border-gray-300 p-2 w-full rounded focus:ring-2 focus:ring-blue-500 outline-none" value={editData.spouse} onChange={e => setEditData({...editData, spouse: e.target.value})} /></div>
+                                    <div><label className="text-xs font-semibold text-gray-500 uppercase">Mobile</label><input type="text" className="border border-gray-300 p-2 w-full rounded focus:ring-2 focus:ring-blue-500 outline-none" value={editData.mobile} onChange={e => setEditData({...editData, mobile: e.target.value})} /></div>
+                                    <div><label className="text-xs font-semibold text-gray-500 uppercase block mb-1">Photo (Optional)</label><input type="file" accept="image/*" onChange={handlePhotoUpload} className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" /></div>
+                                    <div className="flex gap-2 pt-2">
+                                        <button onClick={handleSave} className="bg-green-600 text-white px-5 py-2 rounded-md font-medium hover:bg-green-700 transition-colors">Save Details</button>
+                                        <button onClick={() => setIsEditing(false)} className="bg-gray-400 text-white px-5 py-2 rounded-md font-medium hover:bg-gray-500 transition-colors">Cancel</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h3 className="font-bold text-xl text-slate-800">{node.name} <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-3 py-1 rounded-full ml-2 align-middle">Generation {node.generation}</span></h3>
+                                    <div className="mt-2 space-y-1">
+                                        {node.spouse && <p className="text-sm text-slate-600 flex items-center"><span className="font-medium mr-2 w-16">Spouse:</span> {node.spouse}</p>}
+                                        {node.mobile && <p className="text-sm text-slate-600 flex items-center"><span className="font-medium mr-2 w-16">Mobile:</span> {node.mobile}</p>}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 w-full md:w-auto md:flex-col justify-center">
+                            {!isEditing && <button onClick={() => setIsEditing(true)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors w-full md:w-auto">✏️ Edit</button>}
+                            {node.generation < 6 && <button onClick={handleAddChild} className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors w-full md:w-auto shadow-sm">+ Add Child (G{node.generation + 1})</button>}
+                            {node.generation > 2 && <button onClick={() => onDelete(node.id)} className="bg-white border border-red-200 text-red-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-red-50 transition-colors w-full md:w-auto">🗑️ Delete</button>}
+                            {hasChildren && (
+                                <button onClick={() => setIsExpanded(!isExpanded)} className="bg-slate-800 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-slate-700 transition-colors w-full md:w-auto shadow-sm flex items-center justify-center gap-2">
+                                    {isExpanded ? '▼ Hide Branch' : `▶ Show Branch (${node.children.length})`}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {isExpanded && hasChildren && (
+                        <div className="tree-line">
+                            {node.children.map(child => (
+                                <TreeNode 
+                                    key={child.id} 
+                                    node={child} 
+                                    onUpdate={handleUpdateChild} 
+                                    onDelete={handleDeleteChild}
+                                    parentGeneration={node.generation}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [treeData, setTreeData] = useState(() => {
+                const saved = localStorage.getItem('chavaFamilyTree');
+                if (saved) {
+                    try { return JSON.parse(saved); } catch(e) { console.error(e); }
+                }
+                return defaultData;
+            });
+
+            useEffect(() => {
+                localStorage.setItem('chavaFamilyTree', JSON.stringify(treeData));
+            }, [treeData]);
+
+            const handleExport = () => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(treeData));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "Chava_Family_Tree_Backup.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            };
+
+            const handleImport = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            setTreeData(importedData);
+                            alert("Backup imported successfully!");
+                        } catch (error) {
+                            alert("Error importing backup. Invalid file format.");
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto p-4 md:p-8">
+                    <div className="bg-gradient-to-r from-blue-900 to-slate-800 text-white p-6 md:p-8 rounded-2xl shadow-xl mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div>
+                            <h1 className="text-4xl font-extrabold tracking-tight mb-2">Chava Family Tree</h1>
+                            <p className="text-blue-200 font-medium text-lg">Interactive Lineage (Generations 1 to 6)</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                            <label className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-6 py-3 rounded-lg font-semibold cursor-pointer transition-all text-center">
+                                📥 Import Backup
+                                <input type="file" accept=".json" className="hidden" onChange={handleImport} />
+                            </label>
+                            <button onClick={handleExport} className="bg-blue-500 hover:bg-blue-400 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-lg text-center">
+                                💾 Save to PC (.json)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="bg-transparent min-h-screen">
+                        <TreeNode 
+                            node={treeData} 
+                            onUpdate={setTreeData} 
+                            onDelete={() => {}} 
+                            parentGeneration={0}
+                        />
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
